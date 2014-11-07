@@ -16,6 +16,46 @@
     </head>
     <body>
         <script src="js/three.min.js"></script>
+        <script id="vertex_shader" type="x-shader/x-vertex">
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vViewPosition;
+
+void main() {
+    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+    vUv = uv;
+    vNormal = normalize( normalMatrix * normal );
+    vViewPosition = -mvPosition.xyz;
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+}
+        </script>
+        <script id="fragment_shader" type="x-shader/x-fragment">
+uniform sampler2D texture;
+uniform sampler2D texture2;
+
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vViewPosition;
+
+void main() {
+    vec4 tColor = texture2D( texture, vUv );
+    vec4 tColor2 = texture2D( texture2, vUv );
+
+    // hack in a fake pointlight at camera location, plus ambient
+    vec3 normal = normalize( vNormal );
+    //vec3 lightDir = normalize( vViewPosition );
+    vec3 lightDir = normalize(vec3(1, 0, 0));
+
+    float dotProduct = max(dot(normal, lightDir), 0.0);
+    float mixture = dotProduct;
+
+    //gl_FragColor = vec4( mix( tColor.rgb, tColor2.rgb, tColor2.a ), 1.0 ) * dotProduct;
+    //gl_FragColor = vec4( mix( tColor2.rgb, tColor.rgb, dotProduct ), 1.0 ) * dotProduct;
+    gl_FragColor = vec4(mix(tColor2.rgb, tColor.rgb, mixture), 1.0) * dotProduct;
+}
+        </script>
         <script>
             var scene = new THREE.Scene();
             var camera = new THREE.PerspectiveCamera(
@@ -24,13 +64,19 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            var color = THREE.ImageUtils.loadTexture('world.jpg');
+            var day = THREE.ImageUtils.loadTexture('day.jpg');
+            var night = THREE.ImageUtils.loadTexture('night.jpg');
             var elevation = THREE.ImageUtils.loadTexture('elevation.png');
             var specular = THREE.ImageUtils.loadTexture('specular.png');
-            var material = new THREE.MeshPhongMaterial(
-                {map: color,
-                 bumpMap: elevation, bumpScale: 0.02,
-                 specularMap: specular, shininess: 50});
+
+            material = new THREE.ShaderMaterial({
+                attributes: {},
+                uniforms: {
+                    texture: {type: 't', value: day},
+                    texture2: {type: 't', value: night}
+                },
+                vertexShader: document.getElementById('vertex_shader').textContent,
+                fragmentShader: document.getElementById('fragment_shader').textContent});
 
             var geometry = new THREE.SphereGeometry(1, 40, 30);
             var globe = new THREE.Mesh(geometry, material);
