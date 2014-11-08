@@ -48,12 +48,11 @@ void main() {
     //vec3 lightDir = normalize( vViewPosition );
     vec3 lightDir = normalize(vec3(1, 0, 0));
 
-    float dotProduct = max(dot(normal, lightDir), 0.0);
-    float mixture = dotProduct;
-
-    //gl_FragColor = vec4( mix( tColor.rgb, tColor2.rgb, tColor2.a ), 1.0 ) * dotProduct;
-    //gl_FragColor = vec4( mix( tColor2.rgb, tColor.rgb, dotProduct ), 1.0 ) * dotProduct;
-    gl_FragColor = vec4(mix(tColor2.rgb, tColor.rgb, mixture), 1.0) * dotProduct;
+    float dotProduct = dot(normal, lightDir);
+    float light = max(dotProduct + 0.4, 0.0);
+    float night = (1.0 - smoothstep(-0.3, 0.1, dotProduct)) * 0.1;
+    float day = smoothstep(-0.3, 1.0, dotProduct);
+    gl_FragColor = vec4((tColor2.rgb * night) + (tColor.rgb * day), 1.0);
 }
         </script>
         <script>
@@ -93,7 +92,7 @@ void main() {
             function render() {
                 requestAnimationFrame(render);
                 var time = Date.now();
-                var delta = (time - previous_time) / 3000;
+                var delta = (time - previous_time) / 6000;
                 globe.rotation.y += delta;
                 previous_time = time;
                 renderer.render(scene, camera);
