@@ -19,14 +19,14 @@
         <script id="vertex_shader" type="x-shader/x-vertex">
 varying vec2 vUv;
 varying vec3 vNormal;
-varying vec3 vViewPosition;
+//varying vec3 vViewPosition;
 
 void main() {
     vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 
     vUv = uv;
     vNormal = normalize( normalMatrix * normal );
-    vViewPosition = -mvPosition.xyz;
+    //vViewPosition = -mvPosition.xyz;
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
 }
@@ -49,9 +49,8 @@ void main() {
     vec3 lightDir = normalize(vec3(1, 0, 0));
 
     float dotProduct = dot(normal, lightDir);
-    float light = max(dotProduct + 0.4, 0.0);
     float night = (1.0 - smoothstep(-0.3, 0.1, dotProduct)) * 0.1;
-    float day = smoothstep(-0.3, 1.0, dotProduct);
+    float day = smoothstep(-0.2, 1.0, dotProduct);
     gl_FragColor = vec4((tColor2.rgb * night) + (tColor.rgb * day), 1.0);
 }
         </script>
