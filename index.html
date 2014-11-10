@@ -16,36 +16,37 @@
     </head>
     <body>
         <script src="js/three.min.js"></script>
+        <script src="js/OrbitControls.js"></script>
         <script id="vertex_shader" type="x-shader/x-vertex">
 varying vec2 vUv;
 varying vec3 vNormal;
 //varying vec3 vViewPosition;
 
 void main() {
-    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+    //vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
 
     vUv = uv;
-    vNormal = normalize( normalMatrix * normal );
+    vNormal = normalize(normalMatrix * normal);
     //vViewPosition = -mvPosition.xyz;
 
-    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }
         </script>
         <script id="fragment_shader" type="x-shader/x-fragment">
-uniform sampler2D texture;
-uniform sampler2D texture2;
+uniform sampler2D s_day;
+uniform sampler2D s_night;
 
 varying vec2 vUv;
 varying vec3 vNormal;
-varying vec3 vViewPosition;
+//varying vec3 vViewPosition;
 
 void main() {
-    vec4 tColor = texture2D( texture, vUv );
-    vec4 tColor2 = texture2D( texture2, vUv );
+    vec4 tColor = texture2D(s_day, vUv);
+    vec4 tColor2 = texture2D(s_night, vUv);
 
     // hack in a fake pointlight at camera location, plus ambient
-    vec3 normal = normalize( vNormal );
-    //vec3 lightDir = normalize( vViewPosition );
+    vec3 normal = normalize(vNormal);
+    //vec3 lightDir = normalize(vViewPosition);
     vec3 lightDir = normalize(vec3(1, 0, 0));
 
     float dotProduct = dot(normal, lightDir);
@@ -70,8 +71,8 @@ void main() {
             material = new THREE.ShaderMaterial({
                 attributes: {},
                 uniforms: {
-                    texture: {type: 't', value: day},
-                    texture2: {type: 't', value: night}
+                    s_day: {type: 't', value: day},
+                    s_night: {type: 't', value: night}
                 },
                 vertexShader: document.getElementById('vertex_shader').textContent,
                 fragmentShader: document.getElementById('fragment_shader').textContent});
@@ -86,14 +87,18 @@ void main() {
             camera.position.z = 1.6;
             camera.lookAt(scene.position);
 
-            var previous_time = Date.now();
+            var orbitControls = new THREE.OrbitControls(camera);
+            orbitControls.autoRotate = true;
+            orbitControls.userPan = false;
+
+            var clock = new THREE.Clock();
 
             function render() {
+                // Time since last frame / seconds
+                var delta = clock.getDelta();
+                orbitControls.update(delta);
+
                 requestAnimationFrame(render);
-                var time = Date.now();
-                var delta = (time - previous_time) / 6000;
-                globe.rotation.y += delta;
-                previous_time = time;
                 renderer.render(scene, camera);
             }
             render();
