@@ -91,8 +91,11 @@ void main() {
             var day = THREE.ImageUtils.loadTexture('day.jpg');
             var night = THREE.ImageUtils.loadTexture('night.jpg');
             var normal = THREE.ImageUtils.loadTexture('normal.png');
-            //var elevation = THREE.ImageUtils.loadTexture('elevation.png');
             //var specular = THREE.ImageUtils.loadTexture('specular.png');
+
+            function getShader(name) {
+                return document.getElementById(name).textContent;
+            }
 
             material = new THREE.ShaderMaterial({
                 attributes: {},
@@ -101,8 +104,9 @@ void main() {
                     s_night: {type: 't', value: night},
                     s_normal: {type: 't', value: normal}
                 },
-                vertexShader: document.getElementById('vertex_shader').textContent,
-                fragmentShader: document.getElementById('fragment_shader').textContent});
+                vertexShader: getShader('vertex_shader'),
+                fragmentShader: getShader('fragment_shader')
+            });
 
             var geometry = new THREE.SphereGeometry(1, 40, 30);
             geometry.computeTangents();
