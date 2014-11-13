@@ -27,13 +27,15 @@
 //  mat4 modelMatrix        // Object to world
 //  mat4 viewMatrix         // World to camera
 //  mat4 modelViewMatrix    // Object to camera
+//  mat3 normalMatrix       // Upper 3x3 of modelViewMatrix (obj -> camera)
+//  vec3 cameraPosition
 attribute vec4 tangent;
 
 varying vec2 vUv;
 varying vec3 vNormal;
 varying vec3 vTangent;
 varying vec3 vBinormal;
-varying vec3 vViewPosition;
+varying vec3 vSurfaceToEye;
 
 void main() {
     vUv = uv;
@@ -43,41 +45,46 @@ void main() {
     vBinormal = normalize(cross(vNormal, vTangent) * tangent.w);
 
     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-    vViewPosition = -mvPosition.xyz;
+    vSurfaceToEye = -mvPosition.xyz;
 
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mvPosition;
 }
         </script>
         <script id="fragment_shader" type="x-shader/x-fragment">
 uniform sampler2D s_day;
 uniform sampler2D s_night;
 uniform sampler2D s_normal;
+uniform sampler2D s_specular;
 
 varying vec2 vUv;
 varying vec3 vNormal;
 varying vec3 vTangent;
 varying vec3 vBinormal;
-varying vec3 vViewPosition;
+varying vec3 vSurfaceToEye;
 
 void main() {
     vec4 tColor = texture2D(s_day, vUv);
     vec4 tColor2 = texture2D(s_night, vUv);
     vec3 normal_map = (texture2D(s_normal, vUv).xyz * 2.0) - 1.0;
-    normal_map.xy *= 0.09;
-    normal_map.y = 1.0 - normal_map.y;
+    normal_map.xy *= 0.05;
     normal_map = normalize(normal_map);
+    float kSpecular = texture2D(s_specular, vUv).x * 0.5 + 0.2;
 
     mat3 tbn = mat3(vTangent, vBinormal, vNormal);
 
-    //vec3 normal = normalize(vNormal);
     vec3 normal = normalize(tbn * normal_map.xyz);
-    vec3 lightDir = normalize(vViewPosition);
-    //vec3 lightDir = normalize(vec3(1, 0.4, 0.8));
+    vec3 surfaceToLightDir = normalize(vec3(2.0, 0.0, 0.0));
 
-    float dotProduct = dot(normal, lightDir);
-    float night = (1.0 - smoothstep(-0.3, 0.1, dotProduct)) * 0.1;
-    float day = smoothstep(-0.2, 1.0, dotProduct);
-    gl_FragColor = vec4((tColor2.rgb * night) + (tColor.rgb * day), 1.0);
+    float nDotL = dot(normal, surfaceToLightDir);
+    // R = the reflection of surfaceToLightDir (L) about the normal
+    vec3 R = (2.0 * normal * nDotL) - surfaceToLightDir;
+    float rDotV = dot(R, normalize(vSurfaceToEye));
+    vec3 specular = vec3(kSpecular * pow(max(0.0, rDotV), 10.0));
+    float night = (1.0 - smoothstep(-0.3, 0.1, nDotL)) * 0.1;
+    float day = smoothstep(-0.2, 1.0, nDotL);
+
+    vec3 color = (tColor2.rgb * night) + (tColor.rgb * day) + specular;
+    gl_FragColor = vec4(color, 1.0);
 }
         </script>
         <script>
@@ -91,18 +98,19 @@ void main() {
             var day = THREE.ImageUtils.loadTexture('day.jpg');
             var night = THREE.ImageUtils.loadTexture('night.jpg');
             var normal = THREE.ImageUtils.loadTexture('normal.png');
-            //var specular = THREE.ImageUtils.loadTexture('specular.png');
+            var specular = THREE.ImageUtils.loadTexture('specular.png');
 
             function getShader(name) {
                 return document.getElementById(name).textContent;
             }
 
-            material = new THREE.ShaderMaterial({
+            var material = new THREE.ShaderMaterial({
                 attributes: {},
                 uniforms: {
                     s_day: {type: 't', value: day},
                     s_night: {type: 't', value: night},
-                    s_normal: {type: 't', value: normal}
+                    s_normal: {type: 't', value: normal},
+                    s_specular: {type: 't', value: specular}
                 },
                 vertexShader: getShader('vertex_shader'),
                 fragmentShader: getShader('fragment_shader')
@@ -112,15 +120,15 @@ void main() {
             geometry.computeTangents();
             var globe = new THREE.Mesh(geometry, material);
             scene.add(globe);
-            var light = new THREE.DirectionalLight(0xffffff, 1);
-            light.position.set(2, 1, 1).normalize();
-            scene.add(light);
-            camera.position.y = 1.6;
-            camera.position.z = 1.6;
+            //var light = new THREE.DirectionalLight(0xffffff, 1);
+            //light.position.set(2, 1, 2).normalize();
+            //scene.add(light);
+            //camera.position.y = 1.6;
+            camera.position.z = 2.6;
             camera.lookAt(scene.position);
 
             var orbitControls = new THREE.OrbitControls(camera);
-            orbitControls.autoRotate = true;
+            //orbitControls.autoRotate = true;
             orbitControls.userPan = false;
 
             var clock = new THREE.Clock();
@@ -129,6 +137,7 @@ void main() {
                 // Time since last frame / seconds
                 var delta = clock.getDelta();
                 orbitControls.update(delta);
+                globe.rotation.y -= delta / 40;
 
                 requestAnimationFrame(render);
                 renderer.render(scene, camera);
