@@ -79,7 +79,7 @@ void main() {
     // R = the reflection of surfaceToLightDir (L) about the normal
     vec3 R = (2.0 * normal * nDotL) - surfaceToLightDir;
     float rDotV = dot(R, normalize(vSurfaceToEye));
-    vec3 specular = vec3(kSpecular * pow(max(0.0, rDotV), 10.0));
+    vec3 specular = vec3(kSpecular * pow(max(0.0, rDotV), 20.0));
     float night = (1.0 - smoothstep(-0.3, 0.1, nDotL)) * 0.1;
     float day = smoothstep(-0.2, 1.0, nDotL);
 
@@ -116,7 +116,7 @@ void main() {
                 fragmentShader: getShader('fragment_shader')
             });
 
-            var geometry = new THREE.SphereGeometry(1, 40, 30);
+            var geometry = new THREE.SphereGeometry(1, 80, 60);
             geometry.computeTangents();
             var globe = new THREE.Mesh(geometry, material);
             scene.add(globe);
@@ -128,7 +128,6 @@ void main() {
             camera.lookAt(scene.position);
 
             var orbitControls = new THREE.OrbitControls(camera);
-            //orbitControls.autoRotate = true;
             orbitControls.userPan = false;
 
             var clock = new THREE.Clock();
@@ -137,7 +136,7 @@ void main() {
                 // Time since last frame / seconds
                 var delta = clock.getDelta();
                 orbitControls.update(delta);
-                globe.rotation.y -= delta / 40;
+                globe.rotation.y += delta / 40;
 
                 requestAnimationFrame(render);
                 renderer.render(scene, camera);
