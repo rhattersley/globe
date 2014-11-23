@@ -27,15 +27,28 @@
 //  mat4 modelMatrix        // Object to world
 //  mat4 viewMatrix         // World to camera
 //  mat4 modelViewMatrix    // Object to camera
+//  mat4 projectionmatrix
 //  mat3 normalMatrix       // Upper 3x3 of modelViewMatrix (obj -> camera)
 //  vec3 cameraPosition
+#define N_LIGHTS 2
+
 attribute vec4 tangent;
+
+//struct light {
+//    float brightness;
+//    vec3 position;  // In world coords.
+//};
+
+//uniform light lights[N_LIGHTS];
+uniform vec3 light_position;
 
 varying vec2 vUv;
 varying vec3 vNormal;
 varying vec3 vTangent;
 varying vec3 vBinormal;
 varying vec3 vSurfaceToEye;
+//varying vec3 vLightPositions[N_LIGHTS];
+varying vec3 vLightPosition;
 
 void main() {
     vUv = uv;
@@ -47,6 +60,12 @@ void main() {
     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
     vSurfaceToEye = -mvPosition.xyz;
 
+//    for(int i = 0; i < N_LIGHTS; i++) {
+//        vLightPositions[i] = (viewMatrix * vec4(lights[i].position, 1.0)).xyz;
+//    }
+    //vLightPosition = (viewMatrix * vec4(light_position, 1.0)).xyz;
+    vLightPosition = (modelViewMatrix * vec4(light_position, 1.0)).xyz;
+
     gl_Position = projectionMatrix * mvPosition;
 }
         </script>
@@ -56,11 +75,23 @@ uniform sampler2D s_night;
 uniform sampler2D s_normal;
 uniform sampler2D s_specular;
 
+struct light {
+    float brightness;
+    vec3 position;  // In world coords.
+};
+
+//#define N_LIGHTS 2
+//uniform light lights[N_LIGHTS];
+uniform float light_intensity;
+
 varying vec2 vUv;
 varying vec3 vNormal;
 varying vec3 vTangent;
 varying vec3 vBinormal;
 varying vec3 vSurfaceToEye;
+
+//varying vec3 vLightPositions[N_LIGHTS];
+varying vec3 vLightPosition;
 
 void main() {
     vec4 tColor = texture2D(s_day, vUv);
@@ -84,6 +115,21 @@ void main() {
     float day = max(0.0, nDotL);
 
     vec3 color = (tColor2.rgb * night) + (tColor.rgb * day) + specular;
+    //color *= 0.0;
+
+    // light_position: (0, 0, 1.1) -> vLightPosition: (0, -0.0001, -1.5)
+    // vSurfaceToEye: (-.9:.9, -.9:.9, 1.6:2.2)
+    //  center: (0, 0, 1.6)
+    // => surfaceToLightDir = (0, 0, 0.1)
+    vec3 surfaceToLight = vSurfaceToEye + vLightPosition;
+    float dist = length(surfaceToLight);
+    // TODO: Limit range?
+    //float intensity = 20.0 * min(0.02 / dist, 1.0);
+    float intensity = light_intensity * 0.8 / dist;
+    surfaceToLightDir = normalize(surfaceToLight);
+    nDotL = dot(normal, surfaceToLightDir);
+    color += tColor.rgb * vec3(0.9, 0.9, 1.0) * (max(nDotL, 0.0) * intensity);
+
     gl_FragColor = vec4(color * 1.5, 1.0);
 }
         </script>
@@ -134,7 +180,10 @@ void main() {
                     s_day: {type: 't', value: day},
                     s_night: {type: 't', value: night},
                     s_normal: {type: 't', value: normal},
-                    s_specular: {type: 't', value: specular}
+                    s_specular: {type: 't', value: specular},
+                    //light_position: {type: '3f', value: [1.0, 2.0, 0.0]}
+                    light_position: {type: '3f', value: [0.0, 0.0, 1.1]},
+                    light_intensity: {type: 'f', value: 1.0}
                 },
                 vertexShader: getShader('vertex_shader'),
                 fragmentShader: getShader('fragment_shader')
@@ -146,6 +195,7 @@ void main() {
             var globe = new THREE.Mesh(geometry, material);
             scene.add(globe);
 
+            /*
             geometry = new THREE.PlaneGeometry(0.2, 0.2);
             material = new THREE.MeshBasicMaterial({side: THREE.DoubleSide});
             material = new THREE.ShaderMaterial({
@@ -160,6 +210,7 @@ void main() {
             var plane = new THREE.Mesh(geometry, material);
             plane.position.z = radius * 1.001;
             globe.add(plane);
+            */
 
             camera.position.z = 2.6;
             camera.lookAt(scene.position);
@@ -173,14 +224,26 @@ void main() {
                 // Time since last frame / seconds
                 var delta = clock.getDelta();
                 orbitControls.update(delta);
-                globe.rotation.y += delta / 40;
-                var time = material.uniforms.time.value;
+                globe.rotation.y += delta / 4;//0;
+                var time = material.uniforms.light_intensity.value;
                 if (time > 0.01) {
-                    time *= 0.4;
+                    time *= 0.2;
                 } else {
                     time = 1.0;
+                    var lat = Math.random() * 180 - 90;
+                    var lng = Math.random() * 360;
+
+                    var phi = (90 - lat) * Math.PI / 180;
+                    var theta = (180 - lng) * Math.PI / 180;
+
+                    var position = material.uniforms.light_position;
+                        
+                    var r = radius * 1.01;
+                    position.value = [r * Math.sin(phi) * Math.cos(theta),
+                    r * Math.cos(phi),
+                    r * Math.sin(phi) * Math.sin(theta)];
                 }
-                material.uniforms.time.value = time;
+                material.uniforms.light_intensity.value = time;
 
                 requestAnimationFrame(render);
                 renderer.render(scene, camera);
