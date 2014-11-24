@@ -30,10 +30,11 @@ define([
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 document.body.appendChild(renderer.domElement);
 
-                var day = THREE.ImageUtils.loadTexture('day.jpg');
-                var night = THREE.ImageUtils.loadTexture('night.jpg');
-                var normal = THREE.ImageUtils.loadTexture('normal.png');
-                var specular = THREE.ImageUtils.loadTexture('specular.png');
+                utils = THREE.ImageUtils;
+                var day = utils.loadTexture('media/day.jpg');
+                var night = utils.loadTexture('media/night.jpg');
+                var normal = utils.loadTexture('media/normal.png');
+                var specular = utils.loadTexture('media/specular.png');
 
                 var material = new THREE.ShaderMaterial({
                     attributes: {},
