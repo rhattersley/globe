@@ -42,10 +42,7 @@ define([
                         s_day: {type: 't', value: day},
                         s_night: {type: 't', value: night},
                         s_normal: {type: 't', value: normal},
-                        s_specular: {type: 't', value: specular},
-                        //light_position: {type: '3f', value: [1.0, 2.0, 0.0]}
-                        light_position: {type: '3f', value: [0.0, 0.0, 1.1]},
-                        light_intensity: {type: 'f', value: 1.0}
+                        s_specular: {type: 't', value: specular}
                     },
                     vertexShader: vertex,
                     fragmentShader: fragment
