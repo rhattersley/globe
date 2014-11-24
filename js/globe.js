@@ -14,6 +14,16 @@ define([
     function(THREE, vertex, fragment) {
         return {
             Globe: function() {
+                // TODO:
+                //  - Determine multi-light rendering options.
+                //  - Don't render until resources all loaded. DONE?
+
+                // Rendering options:
+                //  - Deferred rendering
+                //  - Overlay blending
+                //  - Re-render blending
+                //  - MAX_LIGHTS + loop (limited)
+
                 // Initialise the Globe
                 var scene = new THREE.Scene();
                 var renderer = new THREE.WebGLRenderer({antialias: true});
